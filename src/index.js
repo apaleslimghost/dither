@@ -31,7 +31,7 @@ input.addEventListener('change', () => {
 		dither(
 			ctx,
 			imageData,
-			64
+			16
 		)
 
 	}, {once: true})
