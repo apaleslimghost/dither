@@ -23,23 +23,58 @@ input.addEventListener('change', () => {
 
 	image.addEventListener('load', () => {
 		URL.revokeObjectURL(url)
-		canvas.width = image.width
-		canvas.height = image.height
 
-		ctx.drawImage(image, 0, 0)
-		dither(canvas)
+		const {imageData, width, height} = resizeImageAndGetData(image)
+		canvas.width = width
+		canvas.height = height
+
+		dither(
+			ctx,
+			imageData,
+			64
+		)
+
 	}, {once: true})
 
 	image.src = url
 })
 
+function resizeImageAndGetData(
+	/** @type{HTMLImageElement} */ image
+) {
+	const aspect = image.width / image.height
+	const landscape = image.width > image.height
+	const width = landscape ? 800 : (800 * aspect)
+	const height = landscape ? (800 / aspect) : 800
+
+	console.log(
+		image.width,
+		image.height,
+		aspect,
+		landscape,
+		width, height
+	)
+
+	const canvas = new OffscreenCanvas(width, height)
+	const ctx = canvas.getContext('2d')
+
+	ctx.drawImage(image, 0, 0, width, height)
+
+	const imageData = ctx.getImageData(0, 0, width, height)
+
+	return {
+		imageData,
+		width,
+		height
+	}
+}
+
 
 function dither(
-	/** @type{HTMLCanvasElement} */ canvas,
+	/** @type{CanvasRenderingContext2D} */ ctx,
+	/** @type{ImageData} */ imageData,
+	/** @type{number} */ paletteSize,
 ) {
-	const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
-	const paletteSize = 64
-
 	const palette = generatePalette(imageData.data, paletteSize)
 
 	for(let index = 0; index < imageData.data.length; index += 4) {
