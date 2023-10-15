@@ -4,29 +4,39 @@ import {propagateError} from './error-diffusion.js'
 import {generatePalette, nearestColor} from './palette.js'
 
 const canvas = document.getElementById('canvas')
-const img = document.getElementById('img')
+const input = document.getElementById('input')
 
 if(!(canvas instanceof HTMLCanvasElement)) {
 	throw 'no'
 }
 
-if(!(img instanceof HTMLImageElement)) {
+if(!(input instanceof HTMLInputElement)) {
 	throw 'no'
 }
 
 const ctx = canvas.getContext('2d')
 
-if(img.complete) {
-	drawImage(canvas, img)
-} else {
-	img.addEventListener('load', () => drawImage(canvas, img), {once: true})
-}
+input.addEventListener('change', () => {
+	const file = input.files[0]
+	const url = URL.createObjectURL(file)
+	const image = new Image()
 
-function drawImage(
+	image.addEventListener('load', () => {
+		URL.revokeObjectURL(url)
+		canvas.width = image.width
+		canvas.height = image.height
+
+		ctx.drawImage(image, 0, 0)
+		dither(canvas)
+	}, {once: true})
+
+	image.src = url
+})
+
+
+function dither(
 	/** @type{HTMLCanvasElement} */ canvas,
-	/** @type{HTMLImageElement} */ img,
 ) {
-	ctx.drawImage(img, 0, 0)
 	const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
 	const paletteSize = 64
 
