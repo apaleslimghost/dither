@@ -6,6 +6,7 @@ import {propagateError} from './error-diffusion.js'
 import {generatePalette, nearestColor} from './palette.js'
 
 let /** @type{ImageData | undefined} */ imageData = undefined
+let /** @type{OffscreenCanvasRenderingContext2D | undefined} */ ctx = undefined
 
 function dither(
 	/** @type{ImageData} */ original,
@@ -45,27 +46,32 @@ function dither(
 		propagateError(imageData, index, gError, 1)
 		propagateError(imageData, index, bError, 2)
 		propagateError(imageData, index, aError, 3)
+
+		// ctx.putImageData(imageData, 0, 0)
+		// ctx.commit()
 	}
 
 	return imageData
 }
 
 
-/** @typedef {{ action: 'setImageData', data: ImageData }} ImageDataMessage */
+/** @typedef {{ action: 'canvas', canvas: OffscreenCanvas, bitmap: ImageBitmap, width: number, height: number }} CanvasMessage */
 /** @typedef {{ action: 'dither', paletteSize: number }} DitherMessage */
-/** @typedef {DitherMessage | ImageDataMessage} Message */
+/** @typedef { DitherMessage | CanvasMessage } Message */
 
 self.addEventListener('message', (/** @type{MessageEvent<Message>} */event) => {
 	switch(event.data.action) {
-		case 'setImageData': {
-			imageData = event.data.data
+		case 'canvas': {
+			const { canvas, bitmap, width, height } = event.data
+			ctx = canvas.getContext('2d')
+			ctx.drawImage(bitmap, 0, 0, width, height)
+			imageData = ctx.getImageData(0, 0, width, height)
 			break
 		}
 		case 'dither': {
 			if(imageData) {
 				const dithered = dither(imageData, event.data.paletteSize)
-
-				postMessage(dithered, [dithered.data.buffer])
+				ctx.putImageData(dithered, 0, 0)
 			} else {
 				throw 'no'
 			}

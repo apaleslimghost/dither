@@ -9,14 +9,13 @@ if(!(input instanceof HTMLInputElement) || !wrapper) {
 
 input.addEventListener('change', () => {
 	const canvas = document.createElement('canvas')
-	const ctx = canvas.getContext('2d')
 	wrapper.replaceChildren(canvas)
 
 	const file = input.files[0]
 	const url = URL.createObjectURL(file)
 	const image = new Image()
 
-	image.addEventListener('load', () => {
+	image.addEventListener('load', async () => {
 		URL.revokeObjectURL(url)
 
 		const aspect = image.width / image.height
@@ -24,14 +23,13 @@ input.addEventListener('change', () => {
 		const width = landscape ? 800 : (800 * aspect)
 		const height = landscape ? (800 / aspect) : 800
 
-		canvas.width = width
-		canvas.height = height
+		image.width = canvas.width = width
+		image.width = canvas.height = height
 
-		ctx.drawImage(image, 0, 0, image.width, image.height, 0, 0, width, height)
+		const offscreen = canvas.transferControlToOffscreen()
+		const bitmap = await createImageBitmap(image)
 
-		const imageData = ctx.getImageData(0, 0, width, height)
-
-		worker.postMessage({ action: 'setImageData', data: imageData }, [imageData.data.buffer])
+		worker.postMessage({ action: 'canvas', canvas: offscreen, bitmap, width, height }, [offscreen, bitmap])
 
 		// TODO
 		setTimeout(() => {
@@ -40,8 +38,6 @@ input.addEventListener('change', () => {
 				paletteSize: 16
 			})
 		}, 100)
-
-		worker.addEventListener('message', event => ctx.putImageData(event.data, 0, 0), {once: true})
 
 	}, {once: true})
 
