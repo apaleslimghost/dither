@@ -1,4 +1,4 @@
-const worker = new Worker('/src/worker.js', {type: 'module'})
+const worker = new Worker('src/worker.js', {type: 'module'})
 
 const canvas = document.getElementById('canvas')
 const input = document.getElementById('input')
