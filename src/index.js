@@ -1,19 +1,17 @@
 const worker = new Worker('src/worker.js', {type: 'module'})
 
-const canvas = document.getElementById('canvas')
 const input = document.getElementById('input')
+const wrapper = document.getElementById('wrapper')
 
-if(!(canvas instanceof HTMLCanvasElement)) {
+if(!(input instanceof HTMLInputElement) || !wrapper) {
 	throw 'no'
 }
-
-if(!(input instanceof HTMLInputElement)) {
-	throw 'no'
-}
-
-const ctx = canvas.getContext('2d')
 
 input.addEventListener('change', () => {
+	const canvas = document.createElement('canvas')
+	const ctx = canvas.getContext('2d')
+	wrapper.replaceChildren(canvas)
+
 	const file = input.files[0]
 	const url = URL.createObjectURL(file)
 	const image = new Image()
@@ -21,7 +19,18 @@ input.addEventListener('change', () => {
 	image.addEventListener('load', () => {
 		URL.revokeObjectURL(url)
 
-		const {imageData, width, height} = resizeImageAndGetData(image)
+		const aspect = image.width / image.height
+		const landscape = image.width > image.height
+		const width = landscape ? 800 : (800 * aspect)
+		const height = landscape ? (800 / aspect) : 800
+
+		const offscreen = new OffscreenCanvas(width, height)
+		const octx = offscreen.getContext('2d')
+
+		octx.drawImage(image, 0, 0, width, height)
+
+		const imageData = octx.getImageData(0, 0, width, height)
+
 		canvas.width = width
 		canvas.height = height
 
@@ -35,41 +44,9 @@ input.addEventListener('change', () => {
 			})
 		}, 100)
 
+		worker.addEventListener('message', event => ctx.putImageData(event.data, 0, 0))
+
 	}, {once: true})
 
 	image.src = url
 })
-
-worker.addEventListener('message', (event) => {
-	ctx.putImageData(event.data, 0, 0)
-})
-
-function resizeImageAndGetData(
-	/** @type{HTMLImageElement} */ image
-) {
-	const aspect = image.width / image.height
-	const landscape = image.width > image.height
-	const width = landscape ? 800 : (800 * aspect)
-	const height = landscape ? (800 / aspect) : 800
-
-	console.log(
-		image.width,
-		image.height,
-		aspect,
-		landscape,
-		width, height
-	)
-
-	const canvas = new OffscreenCanvas(width, height)
-	const ctx = canvas.getContext('2d')
-
-	ctx.drawImage(image, 0, 0, width, height)
-
-	const imageData = ctx.getImageData(0, 0, width, height)
-
-	return {
-		imageData,
-		width,
-		height
-	}
-}
