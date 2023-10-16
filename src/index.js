@@ -1,7 +1,4 @@
-import {luminance, srgbLinear} from './colours.js'
-import {bayer} from './bayer.js'
-import {propagateError} from './error-diffusion.js'
-import {generatePalette, nearestColor} from './palette.js'
+const worker = new Worker('/src/worker.js', {type: 'module'})
 
 const canvas = document.getElementById('canvas')
 const input = document.getElementById('input')
@@ -28,15 +25,23 @@ input.addEventListener('change', () => {
 		canvas.width = width
 		canvas.height = height
 
-		dither(
-			ctx,
-			imageData,
-			16
-		)
+		worker.postMessage({ action: 'setImageData', data: imageData }, [imageData.data.buffer])
+
+		// TODO
+		setTimeout(() => {
+			worker.postMessage({
+				action: 'dither',
+				paletteSize: 16
+			})
+		}, 100)
 
 	}, {once: true})
 
 	image.src = url
+})
+
+worker.addEventListener('message', (event) => {
+	ctx.putImageData(event.data, 0, 0)
 })
 
 function resizeImageAndGetData(
@@ -67,43 +72,4 @@ function resizeImageAndGetData(
 		width,
 		height
 	}
-}
-
-
-function dither(
-	/** @type{CanvasRenderingContext2D} */ ctx,
-	/** @type{ImageData} */ imageData,
-	/** @type{number} */ paletteSize,
-) {
-	const palette = generatePalette(imageData.data, paletteSize)
-
-	for(let index = 0; index < imageData.data.length; index += 4) {
-		const [or, og, ob, oa] = imageData.data.slice(index, index + 4)
-
-		const [r, g, b, a] = nearestColor(
-			palette,
-			bayer(
-				imageData,
-				index,
-				paletteSize
-			)
-		).map(Math.round)
-
-		const rError = or - r
-		const gError = og - g
-		const bError = ob - b
-		const aError = oa - a
-
-		imageData.data[index] = r
-		imageData.data[index + 1] = g
-		imageData.data[index + 2] = b
-		imageData.data[index + 3] = 255
-
-		propagateError(imageData, index, rError, 0)
-		propagateError(imageData, index, gError, 1)
-		propagateError(imageData, index, bError, 2)
-		propagateError(imageData, index, aError, 3)
-	}
-
-	ctx.putImageData(imageData, 0, 0)
 }
