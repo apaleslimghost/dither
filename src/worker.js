@@ -47,8 +47,10 @@ function dither(
 		propagateError(imageData, index, bError, 2)
 		propagateError(imageData, index, aError, 3)
 
-		// ctx.putImageData(imageData, 0, 0)
-		// ctx.commit()
+		if(index % imageData.width === 0) {
+			ctx.putImageData(imageData, 0, 0)
+			ctx.commit()
+		}
 	}
 
 	return imageData
