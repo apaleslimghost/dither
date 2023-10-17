@@ -31,14 +31,6 @@ input.addEventListener('change', () => {
 
 		worker.postMessage({ action: 'canvas', canvas: offscreen, bitmap, width, height }, [offscreen, bitmap])
 
-		// TODO
-		setTimeout(() => {
-			worker.postMessage({
-				action: 'dither',
-				paletteSize: 16
-			})
-		}, 100)
-
 	}, {once: true})
 
 	image.src = url

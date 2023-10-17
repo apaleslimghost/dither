@@ -4,13 +4,17 @@ import {luminance, srgbLinear} from './colours.js'
 import {bayer} from './bayer.js'
 import {propagateError} from './error-diffusion.js'
 import {generatePalette, nearestColor} from './palette.js'
+import defaultParams from './params.js'
+
+/** @typedef {Omit<DitherMessage, 'action'>} DitherParams */
 
 let /** @type{ImageData | undefined} */ imageData = undefined
 let /** @type{OffscreenCanvasRenderingContext2D | undefined} */ ctx = undefined
+let /** @type{DitherParams | undefined} */ params = defaultParams
 
 function dither(
 	/** @type{ImageData} */ original,
-	/** @type{number} */ paletteSize,
+	/** @type{DitherParams} */ {paletteSize},
 ) {
 	const imageData = new ImageData(
 		new Uint8ClampedArray(original.data),
@@ -58,7 +62,7 @@ function dither(
 
 
 /** @typedef {{ action: 'canvas', canvas: OffscreenCanvas, bitmap: ImageBitmap, width: number, height: number }} CanvasMessage */
-/** @typedef {{ action: 'dither', paletteSize: number }} DitherMessage */
+/** @typedef {{ action: 'setDitherParams', paletteSize: number }} DitherMessage */
 /** @typedef { DitherMessage | CanvasMessage } Message */
 
 self.addEventListener('message', (/** @type{MessageEvent<Message>} */event) => {
@@ -68,12 +72,14 @@ self.addEventListener('message', (/** @type{MessageEvent<Message>} */event) => {
 			ctx = canvas.getContext('2d')
 			ctx.drawImage(bitmap, 0, 0, width, height)
 			imageData = ctx.getImageData(0, 0, width, height)
+			dither(imageData, params)
 			break
 		}
-		case 'dither': {
+		case 'setDitherParams': {
+			params = event.data
+
 			if(imageData) {
-				const dithered = dither(imageData, event.data.paletteSize)
-				ctx.putImageData(dithered, 0, 0)
+				dither(imageData, params)
 			} else {
 				throw 'no'
 			}
