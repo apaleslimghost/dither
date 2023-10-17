@@ -80,8 +80,6 @@ self.addEventListener('message', (/** @type{MessageEvent<Message>} */event) => {
 
 			if(imageData) {
 				dither(imageData, params)
-			} else {
-				throw 'no'
 			}
 
 			break
